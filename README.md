@@ -24,7 +24,7 @@ pod 'VonageClientSDKNumberVerification'
 
 ## Compatibility
 
-iOS 12+
+iOS 13+
 
 ## Usage
 
@@ -32,7 +32,10 @@ iOS 12+
 import VonageClientSDKNumberVerification
 
 let client = VGNumberVerificationClient()
-let params = VGNumberVerificationParameters(url: "http://www.vonage.com", headers: ["x-my-header": "My Value"], queryParameters: ["query-param" : "value"])
+let params = VGNumberVerificationParameters(url: "http://www.vonage.com",
+                                            headers: ["x-my-header": "My Value"],
+                                            queryParameters: ["query-param" : "value"]
+             )
         
 let response = try await client.startNumberVerification(params: params)
 ```

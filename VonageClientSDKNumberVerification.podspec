@@ -9,7 +9,7 @@ Pod::Spec.new do |spec|
     spec.license      = { :type => "MIT", :file => "LICENSE" }
     spec.author             = { "author" => "devrel@vonage.com" }
     spec.documentation_url = ""
-    spec.platforms = { :ios => "12.0" }
+    spec.platforms = { :ios => "13.0" }
     spec.swift_version = "5.9"
     spec.source       = { :git => "https://github.com/Vonage/number-verification-sdk-ios.git", :tag => "#{spec.version}" }
     spec.source_files  = "Sources/VonageClientSDKNumberVerification/**/*.swift"
