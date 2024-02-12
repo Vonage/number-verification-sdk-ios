@@ -11,22 +11,24 @@ enum VGNumberVerificationError: Error {
     case invalidUrl
 }
 
-public final class VGNumberVerificationClient {
-    let cellularClient: CellularClient
-        
-    init(cellularClient: CellularClient) {
-        self.cellularClient = cellularClient
+@objc public final class VGNumberVerificationClient: NSObject {
+    var cellularClient: CellularClient
+    
+    override public init() {
+        self.cellularClient = VGCellularClient()
+        super.init()
     }
     
-    public convenience init() {
-        self.init(cellularClient: VGCellularClient())
+    convenience init(cellularClient: CellularClient) {
+        self.init()
+        self.cellularClient = cellularClient
     }
     
     /// This method performs a GET request given a URL with cellular connectivity
     /// - Parameters:
     ///   - params: Parameters to configure your GET request
     ///   - debug: A flag to include or not the url trace in the response
-    public func startNumberVerification(params: VGNumberVerificationParameters, debug: Bool = false) async throws -> [String: Any] {
+    @objc public func startNumberVerification(params: VGNumberVerificationParameters, debug: Bool = false) async throws -> [String: Any] {
         if let url = constructURL(params: params) {
             let response = await cellularClient.get(url: url, headers: params.headers, debug: debug)
             return response

@@ -7,12 +7,12 @@
 
 import Foundation
 
-public struct VGNumberVerificationParameters {
+@objc public class VGNumberVerificationParameters: NSObject {
     let url: String
     let headers: [String: String]
     let queryParameters: [String: String]
     
-    public init(url: String, headers: [String : String], queryParameters: [String : String]) {
+    @objc public init(url: String, headers: [String : String], queryParameters: [String : String]) {
         self.url = url
         self.headers = headers
         self.queryParameters = queryParameters
