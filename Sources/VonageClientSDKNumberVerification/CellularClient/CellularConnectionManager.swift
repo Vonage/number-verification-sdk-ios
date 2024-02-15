@@ -62,7 +62,7 @@ class CellularConnectionManager {
                         self.traceCollector.addDebug(log: "Redirect found: \(url.absoluteString)")
                         self.traceCollector.addTrace(log: "\nfound redirect: \(url) - \(self.traceCollector.now())")
                         self.createTimer()
-                        self.activateConnectionForDataFetch(url: url, headers: headers, requestId: requestId, completion: self.checkResponseHandler)
+                        self.activateConnectionForDataFetch(url: url, headers: headers, cookies: redirectResult.cookies, requestId: requestId, completion: self.checkResponseHandler)
                     } else {
                         self.traceCollector.addDebug(log: "MAX Redirects reached \(String(self.MAX_REDIRECTS))")
                         self.cleanUp()
@@ -91,7 +91,9 @@ class CellularConnectionManager {
         DispatchQueue.main.async {
             self.startMonitoring()
             self.createTimer()
-            self.activateConnectionForDataFetch(url: url, headers: headers, requestId: requestId, completion: self.checkResponseHandler)
+//            let cookie = HTTPCookie.cookies(withResponseHeaderFields: ["Set-Cookie": "key=value"], for: url)
+            
+            self.activateConnectionForDataFetch(url: url, headers: headers, cookies: nil, requestId: requestId, completion: self.checkResponseHandler)
         }
     }
     
@@ -186,7 +188,7 @@ class CellularConnectionManager {
     }
     
     // MARK: - Utility methods
-    func createHttpCommand(url: URL, headers: [String: String]) -> String? {
+    func createHttpCommand(url: URL, headers: [String: String], cookies: [HTTPCookie]?) -> String? {
         guard let host = url.host, let scheme = url.scheme  else {
             return nil
         }
@@ -215,6 +217,23 @@ class CellularConnectionManager {
         
         for (key, value) in headers {
                cmd += "\r\n\(key): \(value)"
+        }
+        
+        if let cookies = cookies {
+            var cookieCount = 0
+            var cookieString = String()
+            for i in 0..<cookies.count {
+                if (((cookies[i].isSecure && scheme == "https") || (!cookies[i].isSecure)) && (cookies[i].domain == "" || (cookies[i].domain != "" && host.contains(cookies[i].domain))) && (cookies[i].path == "" ||  path.starts(with: cookies[i].path))) {
+                    if (cookieCount > 0) {
+                        cookieString += "; "
+                    }
+                    cookieString += String(format:"%@=%@", cookies[i].name, cookies[i].value)
+                    cookieCount += 1
+                }
+            }
+            if (cookieString.count > 0) {
+                cmd += "\r\nCookie: \(String(describing: cookieString))"
+            }
         }
         
         cmd += "\r\nUser-Agent: \(debugInfo.userAgent(sdkVersion: sdkVersion)) "
@@ -279,7 +298,7 @@ class CellularConnectionManager {
         return response
     }
     
-    func parseRedirect(requestUrl: URL, response: String) -> RedirectResult? {
+    func parseRedirect(requestUrl: URL, response: String, cookies: [HTTPCookie]?) -> RedirectResult? {
         guard let _ = requestUrl.host else {
             return nil
         }
@@ -290,7 +309,7 @@ class CellularConnectionManager {
             // some location header are not properly encoded
             let cleanRedirect = redirect.replacingOccurrences(of: " ", with: "+")
             if let redirectURL =  URL(string: String(cleanRedirect)) {
-                return RedirectResult(url: redirectURL.host == nil ? URL(string: redirectURL.description, relativeTo: requestUrl)! : redirectURL)
+                return RedirectResult(url: redirectURL.host == nil ? URL(string: redirectURL.description, relativeTo: requestUrl)! : redirectURL, cookies: self.parseCookies(url:requestUrl, response: response, existingCookies: cookies))
             } else {
                 self.traceCollector.addDebug(log: "URL malformed \(cleanRedirect)")
                 return nil
@@ -365,14 +384,14 @@ class CellularConnectionManager {
         self.cancelExistingConnection()
     }
     
-    func activateConnectionForDataFetch(url: URL, headers: [String : String], requestId: String?, completion: @escaping ResultHandler) {self.cancelExistingConnection()
+    func activateConnectionForDataFetch(url: URL, headers: [String : String], cookies: [HTTPCookie]?, requestId: String?, completion: @escaping ResultHandler) {self.cancelExistingConnection()
         guard let scheme = url.scheme,
               let host = url.host else {
             completion(.err(NetworkError.other("URL has no Host or Scheme")))
             return
         }
         
-        guard let command = createHttpCommand(url: url, headers: headers),
+        guard let command = createHttpCommand(url: url, headers: headers, cookies: cookies),
               let data = command.data(using: .utf8) else {
             completion(.err(NetworkError.other("Unable to create HTTP Request command")))
             return
@@ -384,7 +403,7 @@ class CellularConnectionManager {
         connection = createConnection(scheme: scheme, host: host, port: url.port)
         if let connection = connection {
             connection.stateUpdateHandler = createConnectionUpdateHandler(completion: completion, readyStateHandler: { [weak self] in
-                self?.sendAndReceiveWithBody(requestUrl: url, data: data, completion: completion)
+                self?.sendAndReceiveWithBody(requestUrl: url, data: data, cookies: cookies, completion: completion)
             })
             // All connection events will be delivered on the main thread.
             connection.start(queue: .main)
@@ -394,7 +413,7 @@ class CellularConnectionManager {
         }
     }
     
-    func sendAndReceiveWithBody(requestUrl: URL, data: Data, completion: @escaping ResultHandler) {
+    func sendAndReceiveWithBody(requestUrl: URL, data: Data, cookies: [HTTPCookie]?, completion: @escaping ResultHandler) {
         connection?.send(content: data, completion: NWConnection.SendCompletion.contentProcessed({ (error) in
             if let err = error {
                 os_log("Sending error %s", type: .error, err.localizedDescription)
@@ -431,8 +450,8 @@ class CellularConnectionManager {
                 case 204:
                     completion(.dataOK(ConnectionResponse(status: status, body: nil)))
                 case 301...303, 307...308:
-                    guard let ru = self.parseRedirect(requestUrl: requestUrl, response: response) else {
-                        completion(.err(NetworkError.invalidRedirectURL("Invalid URL - unable to parseRecirect")))
+                    guard let ru = self.parseRedirect(requestUrl: requestUrl, response: response, cookies: cookies) else {
+                        completion(.err(NetworkError.invalidRedirectURL("Invalid URL - unable to parseRedirect")))
                         return
                     }
                     completion(.follow(ru))
@@ -496,6 +515,34 @@ class CellularConnectionManager {
             }
         }
         return nil
+    }
+    
+    func parseCookies(url: URL, response: String, existingCookies: [HTTPCookie]?) -> [HTTPCookie]? {
+        var cookies = [HTTPCookie]()
+        if let existing = existingCookies {
+            for i in 0..<existing.count {
+                cookies.append(existing[i])
+            }
+        }
+        var position = response.startIndex
+        while let range = response.range(of: #"ookie: (.*)\r\n"#, options: .regularExpression, range: position..<response.endIndex) {
+            let line = response[range]
+            let optCookieString:Substring? = line[line.index(line.startIndex, offsetBy: 7)..<line.index(line.endIndex, offsetBy: -1)]
+            if let cookieString = optCookieString {
+                self.traceCollector.addDebug(log:"parseCookies \(cookieString)")
+                let optCs: [HTTPCookie]? = HTTPCookie.cookies(withResponseHeaderFields: ["Set-Cookie" : String(cookieString)], for: url)
+                if let cs = optCs  {
+                    if (!cs.isEmpty) {
+                    cookies.append((cs.first)!)
+                    self.traceCollector.addDebug(log:"cookie=> \((cs.first)!)")
+                    }
+                } else {
+                    self.traceCollector.addDebug(log:"cannot parse cookie \(cookieString)")
+                }
+            }
+            position = range.upperBound
+        }
+        return (!cookies.isEmpty) ? cookies : nil
     }
     
 }

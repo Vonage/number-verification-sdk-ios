@@ -76,6 +76,7 @@ class DateUtils {
 
 public struct RedirectResult {
     public var url: URL?
+    public let cookies: [HTTPCookie]?
 }
 
 enum NetworkError: Error, Equatable {
