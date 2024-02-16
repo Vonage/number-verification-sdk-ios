@@ -6,7 +6,7 @@ Pod::Spec.new do |spec|
     Vonage Number Verification uses a mobile phone's Subscriber Identity Module (SIM) to prove a user's identity. This SDK enables making a HTTP request over cellular even when on WiFi.
     DESC
     spec.homepage     = "https://github.com/Vonage/number-verification-sdk-ios"
-    spec.license      = { :type => "MIT", :file => "LICENSE" }
+    spec.license      = { :type => "Apache 2.0", :file => "LICENSE" }
     spec.author             = { "author" => "devrel@vonage.com" }
     spec.documentation_url = ""
     spec.platforms = { :ios => "13.0" }
