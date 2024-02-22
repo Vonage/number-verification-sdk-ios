@@ -8,7 +8,7 @@ Pod::Spec.new do |spec|
     spec.homepage     = "https://github.com/Vonage/number-verification-sdk-ios"
     spec.license      = { :type => "Apache 2.0", :file => "LICENSE" }
     spec.author             = { "author" => "devrel@vonage.com" }
-    spec.documentation_url = ""
+    spec.documentation_url = "https://github.com/Vonage/number-verification-sdk-ios/blob/main/README.md"
     spec.platforms = { :ios => "13.0" }
     spec.swift_version = "5.9"
     spec.source       = { :git => "https://github.com/Vonage/number-verification-sdk-ios.git", :tag => "#{spec.version}" }
