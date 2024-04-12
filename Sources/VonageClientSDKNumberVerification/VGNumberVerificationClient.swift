@@ -30,7 +30,7 @@ enum VGNumberVerificationError: Error {
     ///   - debug: A flag to include or not the url trace in the response
     @objc public func startNumberVerification(params: VGNumberVerificationParameters, debug: Bool = false) async throws -> [String: Any] {
         if let url = constructURL(params: params) {
-            let response = await cellularClient.get(url: url, headers: params.headers, debug: debug)
+            let response = await cellularClient.get(url: url, headers: params.headers, maxRedirectCount: params.maxRedirectCount, debug: debug)
             return response
         } else {
             throw VGNumberVerificationError.invalidUrl

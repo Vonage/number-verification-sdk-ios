@@ -18,7 +18,6 @@ class CellularConnectionManager {
     // Mitigation for tcp timeout not triggering any events.
     private var timer: Timer?
     private var CONNECTION_TIME_OUT = 5.0
-    private let MAX_REDIRECTS = 10
     private var pathMonitor: NWPathMonitor?
     private var checkResponseHandler: ResultHandler!
     private var debugInfo = DebugInfo()
@@ -28,7 +27,7 @@ class CellularConnectionManager {
         TraceCollector()
     }()
     
-    func get(url: URL, headers: [String: String], debug: Bool, completion: @escaping ([String : Any]) -> Void) {
+    func get(url: URL, headers: [String: String], maxRedirectCount: Int, debug: Bool, completion: @escaping ([String : Any]) -> Void) {
         if (debug) {
             traceCollector.isDebugInfoCollectionEnabled = true
             traceCollector.isConsoleLogsEnabled = true
@@ -58,13 +57,13 @@ class CellularConnectionManager {
             case .follow(let redirectResult):
                 if let url = redirectResult.url {
                     redirectCount+=1
-                    if redirectCount <= self.MAX_REDIRECTS {
+                    if redirectCount <= maxRedirectCount {
                         self.traceCollector.addDebug(log: "Redirect found: \(url.absoluteString)")
                         self.traceCollector.addTrace(log: "\nfound redirect: \(url) - \(self.traceCollector.now())")
                         self.createTimer()
                         self.activateConnectionForDataFetch(url: url, headers: headers, cookies: redirectResult.cookies, requestId: requestId, completion: self.checkResponseHandler)
                     } else {
-                        self.traceCollector.addDebug(log: "MAX Redirects reached \(String(self.MAX_REDIRECTS))")
+                        self.traceCollector.addDebug(log: "MAX Redirects reached \(String(maxRedirectCount))")
                         self.cleanUp()
                         completion(self.convertNetworkErrorToDictionary(err: NetworkError.tooManyRedirects, debug: debug))
                     }
