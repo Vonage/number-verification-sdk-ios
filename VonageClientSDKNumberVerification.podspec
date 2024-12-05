@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
     spec.name         = "VonageClientSDKNumberVerification"
-    spec.version      = "1.1.0"
+    spec.version      = "1.1.1"
     spec.summary      = "SDK for Vonage Number Verification"
     spec.description  = <<-DESC
     Vonage Number Verification uses a mobile phone's Subscriber Identity Module (SIM) to prove a user's identity. This SDK enables making a HTTP request over cellular even when on WiFi.
