@@ -14,4 +14,6 @@ Pod::Spec.new do |spec|
     spec.source       = { :git => "https://github.com/Vonage/number-verification-sdk-ios.git", :tag => "#{spec.version}" }
     spec.source_files  = "Sources/VonageClientSDKNumberVerification/**/*.swift"
     spec.xcconfig = { "SWIFT_VERSION" => "5.9" }
+    spec.deprecated = true
+    spec.deprecated_in_favor_of = 'VonageClientLibrary'
 end
